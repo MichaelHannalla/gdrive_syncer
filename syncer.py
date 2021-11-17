@@ -1,6 +1,7 @@
 import os
 import time
 import argparse
+import tqdm
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 
@@ -43,12 +44,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Create Google Auth Objects
-    gauth = GoogleAuth()           
-    drive = GoogleDrive(gauth)  
+    gauth = GoogleAuth(settings_file="settings.yaml")  
+    drive = GoogleDrive(gauth)
 
     # Specifying target folders and sync periods
     target_local_folder = args.target_local_folder
-    online_folder_id = ""
+    online_folder_id = "1OtXmAr-Tzr5w26OqA0AMxHC1E7S9AQp-"
     sync_period = args.sync_period                  # 60 seconds between each sync trial
 
     try:
@@ -56,13 +57,18 @@ if __name__ == "__main__":
             print("Starting one sync cycle.")
             file_list_to_upload = os.listdir(target_local_folder)
             files_already_online = read_files_online(online_folder_id)
-            for file_to_upload in file_list_to_upload:              # For each file in the target folder
-                if file_to_upload not in files_already_online:      # Make sure it isn't already uploaded before
-                    push_file_online(target_local_folder + "/" + file_to_upload)    # Then upload
+            online_updated = True
+            for file_to_upload in tqdm.tqdm(file_list_to_upload):              # For each file in the target folder
+                if target_local_folder + "/" + file_to_upload not in files_already_online:      # Make sure it isn't already uploaded before
+                    online_updated = False
+                    push_file_online(target_local_folder + "/" + file_to_upload, online_folder_id)    # Then upload
+            
+            if online_updated == True:
+                print("Online file already updated, didn't push anything online.")
 
             print("Done one sync cycle.")
-            time.sleep(sync_period)                                 # Sleep to achieve desired sync-ing frequency
-
+            time.sleep(sync_period)                                 # Sleep to achieve desired sync-ing frequency 
+            
 
     except KeyboardInterrupt:
         exit()
